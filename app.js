@@ -112,10 +112,13 @@ function leerExcel(buffer) {
     },
     ["precio", "tarifa", "contribucion"]
   ).map((r) => {
-    const tarifa = num(r.tarifa), contrib = num(r.contribucion) ?? 0;
-    const precio = num(r.precio) ?? (tarifa != null ? tarifa * (1 + contrib) : null);
-    return { desde: fecha(r.desde), hasta: fecha(r.hasta), precio, consumo: num(r.consumo) };
-  }).filter((r) => r.desde && r.hasta && r.precio != null && r.consumo != null);
+    // Se guarda la tarifa sin recargo y la contribución aparte, para poder incluirla o quitarla.
+    const precioFinal = num(r.precio);
+    let tarifa = num(r.tarifa), contrib = fraccion(num(r.contribucion));
+    if (tarifa == null && precioFinal != null) tarifa = precioFinal / (1 + (contrib ?? 0));
+    if (contrib == null && tarifa && precioFinal != null) contrib = Math.max(0, precioFinal / tarifa - 1);
+    return { desde: fecha(r.desde), hasta: fecha(r.hasta), tarifa, contrib: contrib ?? 0, consumo: num(r.consumo) };
+  }).filter((r) => r.desde && r.hasta && r.tarifa != null && r.consumo != null);
 
   const gasolina = leerHoja(
     libro, "Gasolina",
@@ -143,7 +146,8 @@ function datosEjemplo() {
   const precios = [905, 1010, 995, 990, 1012, 1048, 1061, 1035, 1044];
   const base = [214, 206, 221, 209, 218, 212, 226, 215, 219];
   const tarifas = precios.map((precio, m) => ({
-    desde: new Date(Date.UTC(2026, m, 1)), hasta: new Date(Date.UTC(2026, m + 1, 0)), precio, base: base[m],
+    desde: new Date(Date.UTC(2026, m, 1)), hasta: new Date(Date.UTC(2026, m + 1, 0)),
+    tarifa: Math.round((precio / 1.2) * 100) / 100, contrib: 0.2, casaBase: base[m],
   }));
   const KWH_POR_BATERIA = 15.2, CONSUMO = 0.205;
   const cargas = [], gasolina = [];
@@ -172,7 +176,7 @@ function datosEjemplo() {
   }
   for (const t of tarifas) {
     const kwhCarro = sum(cargas.filter((c) => c.fecha >= t.desde && c.fecha < +t.hasta + DIA), (c) => c.kwh);
-    t.consumo = Math.round(t.base + kwhCarro);
+    t.consumo = Math.round(t.casaBase + kwhCarro);
   }
   return { cargas, tarifas, gasolina };
 }
@@ -184,6 +188,9 @@ function analizar(datos, ajustes) {
   const tarifas = [...datos.tarifas].sort((a, b) => a.desde - b.desde);
   const gasolina = [...datos.gasolina].sort((a, b) => a.fecha - b.fecha);
 
+  const conContribucion = ajustes.contribucion !== false;
+  for (const t of tarifas) t.precio = t.tarifa * (1 + (conContribucion ? t.contrib : 0));
+  const contribucion = median(tarifas.filter((t) => t.contrib > 0).map((t) => t.contrib));
   const periodoDe = (f) => tarifas.find((t) => f >= t.desde && f < +t.hasta + DIA);
   for (const c of cargas) {
     const t = periodoDe(c.fecha);
@@ -293,7 +300,7 @@ function analizar(datos, ajustes) {
   const bajo20 = conEnergia.filter((c) => c.socIni < 0.2).length;
 
   return {
-    nCargas: conEnergia.length, kwhTotal, precioKwh, sinTarifa, consumo, kmPorCarga,
+    nCargas: conEnergia.length, kwhTotal, precioKwh, sinTarifa, consumo, kmPorCarga, conContribucion, contribucion,
     tipo, precioGal, kmGal, kmGalCarretera, costoKmElec, costoKmGas, costoKmGasCarretera,
     ini: ini.fecha, fin: fin.fecha, kmVentana, kmElec, pctElec, ahorro, costoKmTotal,
     bogota, salidas, listaSalidas, kmPorGalon, costoKmGasElektra,
@@ -443,6 +450,10 @@ function pintar() {
   const a = analizar(estado.datos, estado.ajustes);
   $("#fuente").textContent = estado.fuente;
   if (!estado.ajustes.precioGal) $("#precioGal").value = Math.round(a.precioGal);
+  $("#contribucion").disabled = !a.contribucion;
+  $("#texto-contribucion").textContent = a.contribucion
+    ? `Incluir la contribución del ${fmtPct(a.contribucion)} que trae la factura`
+    : "La factura no trae contribución";
 
   const veces = a.costoKmElec ? a.costoKmGas / a.costoKmElec : null;
   $("#hero").innerHTML = a.costoKmElec
@@ -453,7 +464,9 @@ function pintar() {
 
   const tile = (label, value, note) => `<div class="tile"><p class="tile-label">${label}</p><p class="tile-value">${value}</p><p class="tile-note">${note}</p></div>`;
   const tiles = [];
-  if (a.precioKwh) tiles.push(tile("Precio real del kWh", fmtPesos(a.precioKwh), "Factura de la casa, con la contribución"));
+  if (a.precioKwh) tiles.push(tile(
+    a.conContribucion ? "Precio real del kWh" : "Precio del kWh sin contribución", fmtPesos(a.precioKwh),
+    a.contribucion ? (a.conContribucion ? `Factura de la casa, con la contribución del ${fmtPct(a.contribucion)}` : `Sin el ${fmtPct(a.contribucion)} de contribución de la factura`) : "Factura de la casa"));
   if (a.consumo) tiles.push(tile("Consumo eléctrico", `${fmtNum(a.consumo * 100, 1)} <span class="tile-unit">kWh/100 km</span>`, a.kmPorCarga ? `≈ ${fmtNum(a.kmPorCarga)} km por carga, de casi vacía a 80 %` : "Medido entre cargas"));
   if (a.pctElec != null) tiles.push(tile("Km con batería (aprox.)", fmtPct(a.pctElec), `De ${fmtNum(a.kmVentana)} km, del ${fmtFecha(a.ini)} al ${fmtFecha(a.fin)}`));
   if (a.ahorro != null) tiles.push(tile("Ahorro frente a gasolina (aprox.)", fmtPesosCorto(a.ahorro), `Frente al carro de referencia (${a.tipo}, en ciudad), en los km que hizo con batería`));
@@ -620,6 +633,10 @@ const zona = $("#inicio");
 ["dragleave", "drop"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.remove("over"); }));
 zona.addEventListener("drop", (e) => e.dataTransfer.files[0] && cargarArchivo(e.dataTransfer.files[0]));
 
+$("#contribucion").addEventListener("change", (e) => {
+  estado.ajustes.contribucion = e.target.checked;
+  pintar();
+});
 document.querySelectorAll('input[name="tipoGas"]').forEach((r) => r.addEventListener("change", (e) => {
   estado.ajustes.tipo = e.target.value;
   estado.ajustes.precioGal = null;

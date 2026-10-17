@@ -36,8 +36,12 @@
 
       <section class="tiles" id="tiles" aria-label="Indicadores"></section>
 
-      <section class="card params" aria-label="Carro de referencia">
-        <h2>Contra qué carro a gasolina comparo</h2>
+      <section class="card params" aria-label="Ajustes">
+        <h2>Energía eléctrica</h2>
+        <label class="check"><input type="checkbox" id="contribucion" checked> <span id="texto-contribucion">Incluir la contribución que trae la factura</span></label>
+        <p class="note">En Bogotá, los estratos 5 y 6 (y los comercios) pagan una contribución del 20 % sobre la tarifa. Quítala para ver cuánto costaría el kilómetro sin ese recargo, como en el estrato 4.</p>
+
+        <h2 class="h2-sep">Contra qué carro a gasolina comparo</h2>
         <div class="param-row">
           <fieldset class="tipo">
             <legend>Gasolina</legend>
@@ -98,7 +102,7 @@
       <details class="card">
         <summary>Cómo se calcula</summary>
         <ul class="como">
-          <li><strong>Precio real del kWh:</strong> la tarifa de cada factura de la casa, con la contribución del estrato, según el periodo en que cayó cada carga. No se usa el precio que muestra la app.</li>
+          <li><strong>Precio real del kWh:</strong> la tarifa de cada factura de la casa, según el periodo en que cayó cada carga, con o sin la contribución del estrato (la escoges arriba). No se usa el precio que muestra la app.</li>
           <li><strong>Consumo eléctrico:</strong> se mide en los tramos entre dos cargas seguidas (sin tanqueadas en medio y de menos de 90 km): batería que se gastó ÷ kilómetros. Se toma la mediana. Es energía medida en el enchufe, así que ya incluye las pérdidas de la carga.</li>
           <li><strong>Costo por km en eléctrico:</strong> precio real del kWh × consumo.</li>
           <li><strong>Costo por km a gasolina:</strong> precio del galón ÷ rendimiento del carro de referencia: en ciudad para Bogotá y en carretera para las salidas (los ajustas arriba).</li>

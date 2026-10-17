@@ -5,7 +5,7 @@
 ## Qué muestra
 
 - **Costo por kilómetro en eléctrico** frente a un carro a gasolina de referencia, con gasolina corriente (precio regulado de Bogotá, $16.377 en octubre de 2026, CREG) o extra (el de la última tanqueada). El carro de partida es una Renault Koleos 2.5: 30 km por galón en ciudad y 40 en carretera (los oficiales son 31,5 y 47). El rendimiento y el precio se pueden cambiar.
-- **Precio real del kWh**, con la contribución del estrato, según el periodo de cada factura.
+- **Precio real del kWh** según el periodo de cada factura, con o sin la contribución del estrato (en Bogotá, el 20 % para los estratos 5 y 6). Se escoge con una casilla.
 - **Consumo eléctrico** medido entre cargas, **km hechos con batería** y **ahorro aproximado**.
 - **En Bogotá frente a las salidas**: separa cada tramo entre dos cargas en km con batería y km con gasolina. Los tramos de 120 km o más cuentan como salidas de la ciudad. Muestra el costo por km de cada uno, las salidas encontradas y el rendimiento con gasolina.
 - **Mes a mes**: lo que se fue en energía y en gasolina.

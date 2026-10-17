@@ -119,6 +119,10 @@ h2 { margin: 0 0 4px; font-size: 18px; line-height: 1.3; }
 .tile-unit { font-size: 14px; font-weight: 500; color: var(--ink-2); }
 
 .params h2 { margin-bottom: 12px; }
+.params .h2-sep { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--grid); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 16px; cursor: pointer; }
+.check input { accent-color: var(--s1); width: 18px; height: 18px; margin: 0; }
+.check input:disabled + span { color: var(--muted); }
 .param-row { display: flex; flex-wrap: wrap; gap: 16px; }
 .param-row label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .unit { font-weight: 400; color: var(--muted); }
