@@ -92,7 +92,7 @@ function leerExcel(buffer) {
       enchufado: "Enchufado",
       odoKm: "Odómetro km", odoMi: "Odómetro mi",
       socIni: "% al enchufar", socFin: "% al desenchufar",
-      kwh: "kWh exactos", kwhApp: ["kWh app (redondeado)", "kWh app"],
+      kwh: ["kWh exactos", "kWh cargados"], kwhApp: ["kWh app (redondeado)", "kWh app"],
       costoApp: "Costo app", tarifaApp: "Tarifa app $/kWh",
     },
     ["odoKm", "odoMi", "kwh", "kwhApp", "costoApp", "tarifaApp"]
@@ -124,7 +124,7 @@ function leerExcel(buffer) {
     libro, "Gasolina",
     {
       fecha: "Fecha y hora", galones: "Galones", precioGal: "Precio por galón",
-      valor: "Valor", neto: "Valor neto", descuento: "Descuento TC", intereses: "Intereses TC",
+      valor: "Valor", neto: "Valor neto", descuento: ["Descuento TC", "Descuento"], intereses: "Intereses TC",
     },
     ["precioGal", "neto", "descuento", "intereses"]
   ).map((r) => {
@@ -136,6 +136,70 @@ function leerExcel(buffer) {
   if (cargas.length < 2) throw new Error("La hoja Cargas necesita al menos dos cargas.");
   if (!tarifas.length) throw new Error("La hoja Tarifas no tiene periodos con tarifa.");
   return { cargas, tarifas, gasolina };
+}
+
+/* ---------- Plantilla de Excel para llenar (se arma en el navegador) ---------- */
+
+function construirPlantilla() {
+  // Número de serie de Excel para una fecha y hora (sin zona horaria).
+  const serie = (a, m, d, h = 0, mi = 0) => Date.UTC(a, m - 1, d, h, mi) / DIA + 25569;
+  const hoja = (filas, anchos, formatos = {}) => {
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    ws["!cols"] = anchos.map((wch) => ({ wch }));
+    const rango = XLSX.utils.decode_range(ws["!ref"]);
+    for (let r = 1; r <= rango.e.r; r++) {
+      for (const [col, z] of Object.entries(formatos)) {
+        const celda = ws[XLSX.utils.encode_cell({ r, c: Number(col) })];
+        if (celda && typeof celda.v === "number") celda.z = z;
+      }
+    }
+    return ws;
+  };
+  const instrucciones = [
+    ["Plantilla del Tablero de Elektra"],
+    [""],
+    ["Cómo usarla"],
+    ["1. Llena las hojas Cargas, Tarifas y Gasolina con los datos de tu carro. Las filas que trae son de ejemplo: bórralas o escribe encima."],
+    ["2. No cambies los nombres de las hojas ni los títulos de las columnas."],
+    ["3. Guarda el archivo y súbelo en https://tablero-elektra.vercel.app con el botón «Escoger mi Excel». Se lee en tu navegador y no se sube a ningún servidor."],
+    [""],
+    ["Hoja Cargas: una fila por carga (sale del historial de carga de la app del carro)"],
+    ["Enchufado: fecha y hora en que conectaste el carro."],
+    ["Odómetro km: los kilómetros del carro al enchufar. Si la app da millas, cambia el título a «Odómetro mi»."],
+    ["% al enchufar y % al desenchufar: la batería al conectar y al desconectar."],
+    ["kWh cargados: la energía que entró en esa carga."],
+    [""],
+    ["Hoja Tarifas: una fila por factura de energía de la casa"],
+    ["Periodo desde y Periodo hasta: el periodo de consumo que trae la factura."],
+    ["Tarifa $/kWh: el precio del kWh de ese periodo, sin contribución."],
+    ["Contribución: el recargo del estrato (20 % en los estratos 5 y 6 de Bogotá; 0 % en los demás)."],
+    ["Consumo casa kWh: el consumo total de la factura, incluido el carro."],
+    [""],
+    ["Hoja Gasolina: una fila por tanqueada"],
+    ["Fecha y hora, Galones, Precio por galón y Valor: salen de la factura de la estación."],
+    ["Descuento: lo que te descontaron en esa tanqueada (por ejemplo, la tarjeta). Si no hubo, déjalo vacío."],
+    [""],
+    ["Importante: el tablero separa la ciudad de las salidas con el odómetro de cada carga. Si falta el odómetro de una carga, esa carga no se cuenta."],
+  ];
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja(instrucciones, [110]), "Instrucciones");
+  XLSX.utils.book_append_sheet(libro, hoja([
+    ["Enchufado", "Odómetro km", "% al enchufar", "% al desenchufar", "kWh cargados"],
+    [serie(2026, 5, 4, 20, 10), 1250, 0.18, 0.8, 9.3],
+    [serie(2026, 5, 6, 19, 45), 1296, 0.2, 0.8, 9.0],
+    [serie(2026, 5, 9, 21, 5), 1338, 0.25, 0.8, 8.3],
+    [serie(2026, 5, 12, 20, 30), 1612, 0.03, 0.8, 11.6],
+    [serie(2026, 5, 14, 19, 50), 1655, 0.21, 0.8, 8.9],
+  ], [18, 13, 14, 16, 14], { 0: "yyyy-mm-dd hh:mm", 2: "0%", 3: "0%", 4: "0.0" }), "Cargas");
+  XLSX.utils.book_append_sheet(libro, hoja([
+    ["Periodo desde", "Periodo hasta", "Tarifa $/kWh", "Contribución", "Consumo casa kWh"],
+    [serie(2026, 4, 20), serie(2026, 5, 19), 870.5, 0.2, 290],
+  ], [14, 14, 13, 13, 17], { 0: "yyyy-mm-dd", 1: "yyyy-mm-dd", 2: "#,##0.00", 3: "0%", 4: "0" }), "Tarifas");
+  XLSX.utils.book_append_sheet(libro, hoja([
+    ["Fecha y hora", "Galones", "Precio por galón", "Valor", "Descuento"],
+    [serie(2026, 5, 11, 7, 30), 4.5, 16377, 73697, 0],
+  ], [18, 10, 16, 12, 12], { 0: "yyyy-mm-dd hh:mm", 1: "0.000", 2: "#,##0", 3: "#,##0", 4: "#,##0" }), "Gasolina");
+  return libro;
 }
 
 /* ---------- Datos de ejemplo (inventados, para mostrar el tablero sin datos reales) ---------- */
@@ -188,7 +252,7 @@ function analizar(datos, ajustes) {
   const tarifas = [...datos.tarifas].sort((a, b) => a.desde - b.desde);
   const gasolina = [...datos.gasolina].sort((a, b) => a.fecha - b.fecha);
 
-  const conContribucion = ajustes.contribucion !== false;
+  const conContribucion = ajustes.contribucion === true;
   for (const t of tarifas) t.precio = t.tarifa * (1 + (conContribucion ? t.contrib : 0));
   const contribucion = median(tarifas.filter((t) => t.contrib > 0).map((t) => t.contrib));
   const periodoDe = (f) => tarifas.find((t) => f >= t.desde && f < +t.hasta + DIA);
@@ -444,13 +508,18 @@ const filaTip = (clase, nombre, valor) => `<div class="row"><span>${clase ? `<sp
 
 /* ---------- Pintar el tablero ---------- */
 
-const estado = { datos: null, fuente: "", ajustes: { kmGalCiudad: 30, kmGalCarretera: 40, tipo: "corriente", precioGal: null } };
+// El tablero arranca sin la contribución del estrato; ?contribucion en el enlace la marca.
+const estado = {
+  datos: null, fuente: "",
+  ajustes: { kmGalCiudad: 30, kmGalCarretera: 40, tipo: "corriente", precioGal: null, contribucion: new URLSearchParams(location.search).has("contribucion") },
+};
 
 function pintar() {
   const a = analizar(estado.datos, estado.ajustes);
   $("#fuente").textContent = estado.fuente;
   if (!estado.ajustes.precioGal) $("#precioGal").value = Math.round(a.precioGal);
   $("#contribucion").disabled = !a.contribucion;
+  $("#contribucion").checked = a.conContribucion && !!a.contribucion;
   $("#texto-contribucion").textContent = a.contribucion
     ? `Incluir la contribución del ${fmtPct(a.contribucion)} que trae la factura`
     : "La factura no trae contribución";
@@ -465,8 +534,8 @@ function pintar() {
   const tile = (label, value, note) => `<div class="tile"><p class="tile-label">${label}</p><p class="tile-value">${value}</p><p class="tile-note">${note}</p></div>`;
   const tiles = [];
   if (a.precioKwh) tiles.push(tile(
-    a.conContribucion ? "Precio real del kWh" : "Precio del kWh sin contribución", fmtPesos(a.precioKwh),
-    a.contribucion ? (a.conContribucion ? `Factura de la casa, con la contribución del ${fmtPct(a.contribucion)}` : `Sin el ${fmtPct(a.contribucion)} de contribución de la factura`) : "Factura de la casa"));
+    "Precio del kWh", fmtPesos(a.precioKwh),
+    a.contribucion ? (a.conContribucion ? `Factura de la casa, con la contribución del ${fmtPct(a.contribucion)}` : "Tarifa de la factura de la casa, sin contribución") : "Tarifa de la factura de la casa"));
   if (a.consumo) tiles.push(tile("Consumo eléctrico", `${fmtNum(a.consumo * 100, 1)} <span class="tile-unit">kWh/100 km</span>`, a.kmPorCarga ? `≈ ${fmtNum(a.kmPorCarga)} km por carga, de casi vacía a 80 %` : "Medido entre cargas"));
   if (a.pctElec != null) tiles.push(tile("Km con batería (aprox.)", fmtPct(a.pctElec), `De ${fmtNum(a.kmVentana)} km, del ${fmtFecha(a.ini)} al ${fmtFecha(a.fin)}`));
   if (a.ahorro != null) tiles.push(tile("Ahorro frente a gasolina (aprox.)", fmtPesosCorto(a.ahorro), `Frente al carro de referencia (${a.tipo}, en ciudad), en los km que hizo con batería`));
@@ -621,6 +690,7 @@ async function cargarArchivo(archivo) {
 }
 
 $("#archivo").addEventListener("change", (e) => e.target.files[0] && cargarArchivo(e.target.files[0]));
+$("#plantilla").addEventListener("click", () => XLSX.writeFile(construirPlantilla(), "Plantilla Tablero de Elektra.xlsx"));
 $("#ejemplo").addEventListener("click", () => mostrarTablero(datosEjemplo(), "Datos de ejemplo: inventados, para ver cómo funciona."));
 $("#cambiar").addEventListener("click", () => {
   $("#tablero").hidden = true;

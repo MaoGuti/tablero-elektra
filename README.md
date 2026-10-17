@@ -5,7 +5,7 @@
 ## Qué muestra
 
 - **Costo por kilómetro en eléctrico** frente a un carro a gasolina de referencia, con gasolina corriente (precio regulado de Bogotá, $16.377 en octubre de 2026, CREG) o extra (el de la última tanqueada). El carro de partida es una Renault Koleos 2.5: 30 km por galón en ciudad y 40 en carretera (los oficiales son 31,5 y 47). El rendimiento y el precio se pueden cambiar.
-- **Precio real del kWh** según el periodo de cada factura, con o sin la contribución del estrato (en Bogotá, el 20 % para los estratos 5 y 6). Se escoge con una casilla.
+- **Precio real del kWh** según el periodo de cada factura, con o sin la contribución del estrato (en Bogotá, el 20 % para los estratos 5 y 6). Arranca sin ella; se marca con una casilla (o con `?contribucion` en el enlace).
 - **Consumo eléctrico** medido entre cargas, **km hechos con batería** y **ahorro aproximado**.
 - **En Bogotá frente a las salidas**: separa cada tramo entre dos cargas en km con batería y km con gasolina. Los tramos de 120 km o más cuentan como salidas de la ciudad. Muestra el costo por km de cada uno, las salidas encontradas y el rendimiento con gasolina.
 - **Mes a mes**: lo que se fue en energía y en gasolina.
@@ -17,6 +17,8 @@
 El Excel se lee en el navegador y no se sube a ningún servidor. La página no guarda nada. El botón "Ver con datos de ejemplo" usa datos inventados; el enlace https://tablero-elektra.vercel.app/?ejemplo abre directamente con ellos.
 
 ## El Excel que necesita
+
+La forma más fácil es **descargar la plantilla** desde la página ("Descarga la plantilla de Excel"): trae las tres hojas, las instrucciones y filas de ejemplo. Se llena y se sube con "Escoger mi Excel".
 
 Tres hojas, con la fila de encabezados en cualquier fila:
 
@@ -38,4 +40,4 @@ y abrir `http://localhost:8765`.
 
 ## Cómo se hizo
 
-Tarea de la sesión 5 de AI Second Brain (30X · Mycelium AI), con las 4D: descubrir, diseñar, desarrollar y desplegar. Lo construyó Claude Code a partir de un segundo cerebro en Obsidian; se publica con GitHub y Vercel.
+Hecho con Claude Code - AI Second Brain (30X · Mycelium AI), con las 4D: descubrir, diseñar, desarrollar y desplegar. Lo construyó Claude Code a partir de un segundo cerebro en Obsidian; se publica con GitHub y Vercel.

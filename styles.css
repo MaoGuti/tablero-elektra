@@ -99,6 +99,7 @@ h2 { margin: 0 0 4px; font-size: 18px; line-height: 1.3; }
 .btn.primary { background: var(--btn); color: var(--btn-ink); border-color: transparent; }
 .btn.primary:hover { filter: brightness(1.08); }
 .btn:focus-visible, .link:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+.plantilla { margin: 16px auto 0; max-width: 56ch; color: var(--ink-2); font-size: 15px; }
 .privacy { margin: 18px 0 0; color: var(--muted); font-size: 14px; }
 .error { margin: 14px 0 0; color: var(--error); font-weight: 600; }
 

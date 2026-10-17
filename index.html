@@ -22,6 +22,7 @@
         <label class="btn primary">Escoger mi Excel<input type="file" id="archivo" accept=".xlsx,.xlsm,.xls" hidden></label>
         <button type="button" class="btn" id="ejemplo">Ver con datos de ejemplo</button>
       </div>
+      <p class="plantilla">¿No tienes el archivo? <button type="button" class="link" id="plantilla">Descarga la plantilla de Excel</button>, llénala con los datos de tu carro y súbela aquí. Trae instrucciones y filas de ejemplo.</p>
       <p class="privacy">Tus datos no salen de este navegador: el Excel se lee aquí mismo y no se sube a ningún servidor.</p>
       <p class="error" id="error" role="alert" hidden></p>
     </section>
@@ -38,8 +39,8 @@
 
       <section class="card params" aria-label="Ajustes">
         <h2>Energía eléctrica</h2>
-        <label class="check"><input type="checkbox" id="contribucion" checked> <span id="texto-contribucion">Incluir la contribución que trae la factura</span></label>
-        <p class="note">En Bogotá, los estratos 5 y 6 (y los comercios) pagan una contribución del 20 % sobre la tarifa. Quítala para ver cuánto costaría el kilómetro sin ese recargo, como en el estrato 4.</p>
+        <label class="check"><input type="checkbox" id="contribucion"> <span id="texto-contribucion">Incluir la contribución que trae la factura</span></label>
+        <p class="note">En Bogotá, los estratos 5 y 6 (y los comercios) pagan una contribución del 20 % sobre la tarifa; los demás estratos no. El tablero arranca sin ella: márcala si tu factura la trae.</p>
 
         <h2 class="h2-sep">Contra qué carro a gasolina comparo</h2>
         <div class="param-row">
@@ -115,7 +116,7 @@
     </div>
 
     <footer class="foot">
-      Hecho con Claude Code como tarea de la sesión 5 de AI Second Brain (30X · Mycelium AI).
+      Hecho con Claude Code - AI Second Brain (30X · Mycelium AI)
     </footer>
   </main>
 
