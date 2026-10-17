@@ -14,7 +14,7 @@
 
 ## Privacidad
 
-El Excel se lee en el navegador y no se sube a ningún servidor. La página no guarda nada. El botón "Ver con datos de ejemplo" usa datos inventados.
+El Excel se lee en el navegador y no se sube a ningún servidor. La página no guarda nada. El botón "Ver con datos de ejemplo" usa datos inventados; el enlace https://tablero-elektra.vercel.app/?ejemplo abre directamente con ellos.
 
 ## El Excel que necesita
 

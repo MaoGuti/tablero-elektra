@@ -661,6 +661,11 @@ new ResizeObserver(() => {
   }
 }).observe($("#tablero"));
 
+// ?ejemplo abre el tablero directamente con los datos de ejemplo (para compartir el enlace).
+if (new URLSearchParams(location.search).has("ejemplo")) {
+  mostrarTablero(datosEjemplo(), "Datos de ejemplo: inventados, para ver cómo funciona.");
+}
+
 // Solo para probar en el computador: ?archivo=ruta-relativa carga un Excel servido localmente.
 const prueba = new URLSearchParams(location.search).get("archivo");
 if (prueba && !prueba.startsWith("//") && /^\/?[\w\-./ %]+\.xlsx$/i.test(prueba)) {
