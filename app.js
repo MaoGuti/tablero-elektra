@@ -156,7 +156,7 @@ function construirPlantilla() {
     return ws;
   };
   const instrucciones = [
-    ["Plantilla del Tablero de Elektra"],
+    ["Plantilla del tablero del vehículo a analizar"],
     [""],
     ["Cómo usarla"],
     ["1. Llena las hojas Cargas, Tarifas y Gasolina con los datos de tu carro. Las filas que trae son de ejemplo: bórralas o escribe encima."],
@@ -690,7 +690,7 @@ async function cargarArchivo(archivo) {
 }
 
 $("#archivo").addEventListener("change", (e) => e.target.files[0] && cargarArchivo(e.target.files[0]));
-$("#plantilla").addEventListener("click", () => XLSX.writeFile(construirPlantilla(), "Plantilla Tablero de Elektra.xlsx"));
+$("#plantilla").addEventListener("click", () => XLSX.writeFile(construirPlantilla(), "Plantilla Tablero del vehículo a analizar.xlsx"));
 $("#ejemplo").addEventListener("click", () => mostrarTablero(datosEjemplo(), "Datos de ejemplo: inventados, para ver cómo funciona."));
 $("#cambiar").addEventListener("click", () => {
   $("#tablero").hidden = true;
