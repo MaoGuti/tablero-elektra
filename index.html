@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tablero de Elektra</title>
+  <meta name="description" content="Cuánto cuesta de verdad cada kilómetro de un híbrido enchufable en Bogotá: eléctrico frente a gasolina, con la tarifa real de la factura de la casa.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <p class="eyebrow">Tablero de Elektra · BMW X1 xDrive25e híbrido enchufable · Bogotá</p>
+      <h1>¿Cuánto me cuesta de verdad cada kilómetro?</h1>
+      <p class="lead">Eléctrico frente a gasolina, con la tarifa real de la factura de la casa, las cargas de la app y las tanqueadas.</p>
+    </header>
+
+    <section id="inicio" class="card drop" aria-label="Escoger los datos">
+      <p class="drop-title">Arrastra aquí el Excel de control de cargas</p>
+      <p class="drop-sub">Necesita las hojas Cargas, Tarifas y Gasolina.</p>
+      <div class="actions">
+        <label class="btn primary">Escoger mi Excel<input type="file" id="archivo" accept=".xlsx,.xlsm,.xls" hidden></label>
+        <button type="button" class="btn" id="ejemplo">Ver con datos de ejemplo</button>
+      </div>
+      <p class="privacy">Tus datos no salen de este navegador: el Excel se lee aquí mismo y no se sube a ningún servidor.</p>
+      <p class="error" id="error" role="alert" hidden></p>
+    </section>
+
+    <div id="tablero" hidden>
+      <div class="source">
+        <span id="fuente"></span>
+        <button type="button" class="link" id="cambiar">Cambiar datos</button>
+      </div>
+
+      <section class="card hero" id="hero" aria-live="polite"></section>
+
+      <section class="tiles" id="tiles" aria-label="Indicadores"></section>
+
+      <section class="card params" aria-label="Carro de referencia">
+        <h2>Contra qué carro a gasolina comparo</h2>
+        <div class="param-row">
+          <fieldset class="tipo">
+            <legend>Gasolina</legend>
+            <label><input type="radio" name="tipoGas" value="corriente" checked> Corriente</label>
+            <label><input type="radio" name="tipoGas" value="extra"> Extra</label>
+          </fieldset>
+          <label>Rendimiento <span class="unit">km por galón</span>
+            <input type="number" id="kmGal" min="10" max="120" step="1" value="35">
+          </label>
+          <label>Precio del galón <span class="unit">pesos</span>
+            <input type="number" id="precioGal" min="5000" max="60000" step="10">
+          </label>
+        </div>
+        <p class="note">La mayoría de los carros a gasolina usa corriente: su precio está regulado y en Bogotá, en octubre de 2026, es de $16.377 por galón (CREG). La extra arranca con el precio de la última tanqueada. Un carro parecido, en ciudad, hace entre 30 y 40 km por galón. Puedes escribir otros valores.</p>
+      </section>
+
+      <section class="card chart-card">
+        <h2>Mes a mes: lo que se fue en energía y en gasolina</h2>
+        <p class="sub" id="sub-meses"></p>
+        <ul class="legend"><li><span class="sw s1"></span>Energía de las cargas</li><li><span class="sw s2"></span>Gasolina</li></ul>
+        <div class="chart" id="c-meses"></div>
+        <p class="note" id="nota-meses"></p>
+      </section>
+
+      <section class="card chart-card">
+        <h2>El carro dentro del consumo de la casa</h2>
+        <p class="sub" id="sub-casa"></p>
+        <ul class="legend"><li><span class="sw neutral"></span>Resto de la casa</li><li><span class="sw s1"></span>Elektra</li></ul>
+        <div class="chart" id="c-casa"></div>
+        <p class="note">kWh de cada factura. El número sobre la columna es la parte que se llevó el carro.</p>
+      </section>
+
+      <section class="card chart-card">
+        <h2>¿Con cuánta batería llega a enchufarse?</h2>
+        <p class="sub" id="sub-habito"></p>
+        <div class="chart" id="c-habito"></div>
+        <p class="note">Número de cargas según el porcentaje de batería que tenía al enchufar.</p>
+      </section>
+
+      <details class="card">
+        <summary>Ver los datos en tabla</summary>
+        <div id="tablas"></div>
+      </details>
+
+      <details class="card">
+        <summary>Cómo se calcula</summary>
+        <ul class="como">
+          <li><strong>Precio real del kWh:</strong> la tarifa de cada factura de la casa, con la contribución del estrato, según el periodo en que cayó cada carga. No se usa el precio que muestra la app.</li>
+          <li><strong>Consumo eléctrico:</strong> se mide en los tramos entre dos cargas seguidas (sin tanqueadas en medio y de menos de 90 km): batería que se gastó ÷ kilómetros. Se toma la mediana. Es energía medida en el enchufe, así que ya incluye las pérdidas de la carga.</li>
+          <li><strong>Costo por km en eléctrico:</strong> precio real del kWh × consumo.</li>
+          <li><strong>Costo por km a gasolina:</strong> precio del galón ÷ rendimiento del carro de referencia (lo ajustas arriba).</li>
+          <li><strong>Km con batería:</strong> kWh cargados ÷ consumo, frente a los km del odómetro entre la primera y la última carga. Es aproximado.</li>
+          <li><strong>Gasolina:</strong> el valor neto de cada tanqueada (con descuentos). Cae en el mes en que se tanquea, no en el que se gasta.</li>
+        </ul>
+      </details>
+    </div>
+
+    <footer class="foot">
+      Hecho con Claude Code como tarea de la sesión 5 de AI Second Brain (30X · Mycelium AI).
+    </footer>
+  </main>
+
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

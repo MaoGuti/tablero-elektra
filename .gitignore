@@ -1,0 +1,9 @@
+# Los datos personales nunca van al repositorio
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+
+.vercel
+.DS_Store
+Thumbs.db
