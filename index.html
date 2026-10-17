@@ -54,6 +54,16 @@
         <p class="note">La mayoría de los carros a gasolina usa corriente: su precio está regulado y en Bogotá, en octubre de 2026, es de $16.377 por galón (CREG). La extra arranca con el precio de la última tanqueada. Un carro parecido, en ciudad, hace entre 30 y 40 km por galón. Puedes escribir otros valores.</p>
       </section>
 
+      <section class="card chart-card" aria-label="Bogotá frente a las salidas">
+        <h2>En Bogotá frente a las salidas de la ciudad</h2>
+        <p class="sub" id="sub-zonas"></p>
+        <div class="zonas" id="zonas"></div>
+        <ul class="legend"><li><span class="sw s1"></span>Km con batería</li><li><span class="sw s2"></span>Km con gasolina</li></ul>
+        <div class="chart chart-h" id="c-zonas"></div>
+        <div id="lista-salidas"></div>
+        <p class="note">Un tramo de 120 km o más entre dos cargas seguidas cuenta como salida: en la ciudad, entre carga y carga, el carro no suele pasar de 90 km. En Bogotá también hay algo de gasolina, cuando la batería se acaba antes de volver a cargar.</p>
+      </section>
+
       <section class="card chart-card">
         <h2>Mes a mes: lo que se fue en energía y en gasolina</h2>
         <p class="sub" id="sub-meses"></p>
@@ -91,6 +101,8 @@
           <li><strong>Costo por km a gasolina:</strong> precio del galón ÷ rendimiento del carro de referencia (lo ajustas arriba).</li>
           <li><strong>Km con batería:</strong> kWh cargados ÷ consumo, frente a los km del odómetro entre la primera y la última carga. Es aproximado.</li>
           <li><strong>Gasolina:</strong> el valor neto de cada tanqueada (con descuentos). Cae en el mes en que se tanquea, no en el que se gasta.</li>
+          <li><strong>Bogotá y salidas:</strong> cada tramo entre dos cargas seguidas se separa en km con batería (batería gastada en el tramo ÷ consumo) y km con gasolina (el resto). Los tramos de 120 km o más son salidas de Bogotá.</li>
+          <li><strong>Costo de la gasolina por km y rendimiento con gasolina:</strong> lo tanqueado entre la primera y la última carga ÷ los km hechos con gasolina en ese tiempo. Es aproximado, porque depende de cuánto tenía el tanque al principio y al final.</li>
         </ul>
       </details>
     </div>

@@ -4,6 +4,7 @@
 
 const DIA = 864e5;
 const PRECIO_CORRIENTE = 16377; // Galón de gasolina corriente en Bogotá, octubre de 2026 (precio regulado, CREG).
+const UMBRAL_SALIDA = 120; // km entre dos cargas seguidas a partir de los cuales el tramo cuenta como salida de Bogotá.
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 const $ = (sel) => document.querySelector(sel);
@@ -154,7 +155,7 @@ function datosEjemplo() {
       km = 150 + Math.round(rnd() * 120);
       const kmBateria = ((soc - 0.03) * KWH_POR_BATERIA) / CONSUMO;
       soc = 0.03;
-      const galones = (km - kmBateria) / (40 + rnd() * 8) + 1.2;
+      const galones = (km - kmBateria) / (52 + rnd() * 8);
       const precioGal = 21900 + Math.round(rnd() * 7) * 100;
       const valor = Math.round(galones * precioGal);
       gasolina.push({ fecha: new Date(dia - DIA / 2), galones: Math.round(galones * 1000) / 1000, precioGal, neto: valor - (valor >= 100000 ? 20000 : 0) });
@@ -229,6 +230,35 @@ function analizar(datos, ajustes) {
   const ahorro = kmElec != null && costoKmElec != null ? kmElec * (costoKmGas - costoKmElec) : null;
   const costoKmTotal = kmVentana > 0 && !sinTarifa ? (costoEnergia + netoVentana) / kmVentana : null;
 
+  // Bogotá frente a salidas: cada tramo entre dos cargas seguidas. Los km con batería salen de la
+  // batería gastada en el tramo; el resto del tramo se hizo con gasolina.
+  const segmentos = [];
+  for (let i = 1; i < conEnergia.length; i++) {
+    const a0 = conEnergia[i - 1], b0 = conEnergia[i];
+    const km = b0.odo - a0.odo;
+    if (km <= 0) continue;
+    const kwh = Math.max(0, a0.socFin - b0.socIni) * (kwhPorBateria || 0);
+    const kmElec = consumo ? Math.min(km, kwh / consumo) : 0;
+    segmentos.push({ desde: a0.fecha, hasta: b0.fecha, km, kwh, kmElec, kmGas: km - kmElec, salida: km >= UMBRAL_SALIDA });
+  }
+  const resumir = (segs) => ({
+    n: segs.length, km: sum(segs, (s) => s.km), kwh: sum(segs, (s) => s.kwh),
+    kmElec: sum(segs, (s) => s.kmElec), kmGas: sum(segs, (s) => s.kmGas),
+  });
+  const bogota = resumir(segmentos.filter((s) => !s.salida));
+  const salidas = resumir(segmentos.filter((s) => s.salida));
+  const listaSalidas = segmentos.filter((s) => s.salida);
+  const galVentana = sum(gasolina.filter((g) => g.fecha >= ini.fecha && g.fecha <= fin.fecha), (g) => g.galones);
+  const kmGasTotal = bogota.kmGas + salidas.kmGas;
+  const costoKmGasElektra = kmGasTotal > 20 && netoVentana > 0 ? netoVentana / kmGasTotal : null;
+  const kmPorGalon = kmGasTotal > 20 && galVentana > 0 ? kmGasTotal / galVentana : null;
+  for (const z of [bogota, salidas]) {
+    z.costo = precioKwh != null && (costoKmGasElektra != null || z.kmGas === 0)
+      ? z.kwh * precioKwh + z.kmGas * (costoKmGasElektra || 0) : null;
+    z.costoKm = z.costo != null && z.km > 0 ? z.costo / z.km : null;
+    z.pctElec = z.km > 0 ? z.kmElec / z.km : null;
+  }
+
   const ultimoMesCargas = claveMes(fin.fecha);
   const claves = [...new Set([...cargas.map((c) => claveMes(c.fecha)), ...gasolina.map((g) => claveMes(g.fecha))])].sort();
   const meses = claves.map((k) => {
@@ -264,6 +294,7 @@ function analizar(datos, ajustes) {
     nCargas: conEnergia.length, kwhTotal, precioKwh, sinTarifa, consumo, kmPorCarga,
     tipo, precioGal, kmGal, costoKmElec, costoKmGas,
     ini: ini.fecha, fin: fin.fecha, kmVentana, kmElec, pctElec, ahorro, costoKmTotal,
+    bogota, salidas, listaSalidas, kmPorGalon, costoKmGasElektra,
     meses, casa, pctCasa, promedioAntes, bins: bins.slice(0, ultimoBin + 1), en80, deNoche, bajo20,
   };
 }
@@ -329,6 +360,51 @@ function columnas(el, { categorias, series, fmtEje, enteros = false, etiquetas =
   dibujar();
 }
 
+function finRedondeado(x, y, w, h, r) {
+  r = Math.min(r, h / 2, w);
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+
+// Barras horizontales apiladas: una fila por grupo.
+function barras(el, { filas, series, fmtEje, etiquetas = [], tip, titulo }) {
+  const dibujar = () => {
+    const W = Math.max(280, el.clientWidth), alto = 24, sep = 24;
+    const m = { t: 10, r: W < 480 ? 92 : 120, b: 28, l: W < 480 ? 64 : 76 };
+    const H = m.t + filas.length * (alto + sep) - sep + m.b + 10;
+    const iw = W - m.l - m.r, yBase = H - m.b;
+    const totales = filas.map((_, i) => sum(series, (s) => s.valores[i]));
+    const { tope, paso } = escala(Math.max(...totales, 0), false);
+    const x = (v) => m.l + (v / tope) * iw;
+    let svg = `<svg width="${W}" height="${H}" role="img" aria-label="${esc(titulo)}">`;
+    for (let v = 0; v <= tope + 1e-9; v += paso) {
+      svg += `<line class="${v === 0 ? "base" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${m.t - 4}" y2="${yBase}"/>`;
+      svg += `<text class="tick" x="${x(v)}" y="${yBase + 18}" text-anchor="middle">${esc(fmtEje(v))}</text>`;
+    }
+    filas.forEach((fila, i) => {
+      const y = m.t + i * (alto + sep);
+      svg += `<text class="tick fila" x="${m.l - 10}" y="${y + alto / 2}" text-anchor="end" dominant-baseline="middle">${esc(fila)}</text>`;
+      const segs = series.map((s) => ({ s, v: s.valores[i] || 0 })).filter((d) => d.v > 0);
+      let acum = 0;
+      segs.forEach((d, j) => {
+        const izq = x(acum) + (j > 0 ? 2 : 0);
+        acum += d.v;
+        const w = Math.max(0, x(acum) - izq);
+        if (w <= 0) return;
+        svg += j === segs.length - 1
+          ? `<path class="${d.s.clase}" d="${finRedondeado(izq, y, w, alto, 4)}"/>`
+          : `<rect class="${d.s.clase}" x="${izq}" y="${y}" width="${w}" height="${alto}"/>`;
+      });
+      if (etiquetas[i]) svg += `<text class="cap" x="${x(totales[i]) + 8}" y="${y + alto / 2}" dominant-baseline="middle">${esc(etiquetas[i])}</text>`;
+      svg += `<rect class="hit" data-i="${i}" tabindex="0" x="${m.l}" y="${y - sep / 2}" width="${iw}" height="${alto + sep}"><title>${esc(fila)}</title></rect>`;
+    });
+    svg += "</svg>";
+    el.innerHTML = svg;
+    conectarTooltip(el, tip);
+  };
+  graficas.push({ el, dibujar });
+  dibujar();
+}
+
 function conectarTooltip(el, tip) {
   const caja = $("#tip");
   const mostrar = (hit, cx, cy) => {
@@ -382,8 +458,55 @@ function pintar() {
   if (a.costoKmTotal != null) tiles.push(tile("Todo incluido (aprox.)", `${fmtPesos(a.costoKmTotal)} <span class="tile-unit">por km</span>`, "Energía y gasolina, en el mismo periodo"));
   $("#tiles").innerHTML = tiles.join("");
 
-  // Mes a mes
   graficas.length = 0;
+
+  // Bogotá frente a salidas
+  const bo = a.bogota, sa = a.salidas;
+  const veces2 = (z) => !z.costoKm ? ""
+    : a.costoKmGas > z.costoKm ? `: ${fmtNum(a.costoKmGas / z.costoKm, 1)} veces más`
+    : ": aquí Elektra no ahorra";
+  const zona = (titulo, z, lineas) => `<div class="zona"><p class="tile-label">${titulo}</p>
+    <p class="zona-valor">${z.costoKm != null ? `${fmtPesos(z.costoKm)} <span class="tile-unit">por km</span>` : "—"}</p>
+    ${lineas.map((l) => `<p class="tile-note">${l}</p>`).join("")}</div>`;
+  $("#zonas").innerHTML =
+    zona("En Bogotá", bo, [
+      `${fmtNum(bo.km)} km · ${bo.pctElec != null ? fmtPct(bo.pctElec) : "—"} con batería`,
+      `Un carro a gasolina ${a.tipo} gastaría ${fmtPesos(a.costoKmGas)} por km${veces2(bo)}.`,
+    ]) +
+    (sa.n
+      ? zona("En las salidas de Bogotá", sa, [
+          `${sa.n} ${sa.n === 1 ? "salida" : "salidas"} · ${fmtNum(sa.km)} km · ${fmtPct(sa.pctElec)} con batería`,
+          `Un carro a gasolina ${a.tipo} gastaría ${fmtPesos(a.costoKmGas)} por km${veces2(sa)}.`,
+          a.kmPorGalon ? `Con gasolina, Elektra hace unos ${fmtNum(a.kmPorGalon)} km por galón.` : "",
+        ].filter(Boolean))
+      : `<div class="zona"><p class="tile-label">En las salidas de Bogotá</p><p class="tile-note">No hay tramos de ${UMBRAL_SALIDA} km o más entre dos cargas en este periodo.</p></div>`);
+  $("#sub-zonas").textContent = sa.n
+    ? `En Bogotá, el ${fmtPct(bo.pctElec)} de los km van con batería. En las salidas, la gasolina hace el ${fmtPct(1 - sa.pctElec)}.`
+    : `En Bogotá, el ${fmtPct(bo.pctElec)} de los km van con batería.`;
+  barras($("#c-zonas"), {
+    titulo: "Km con batería y con gasolina, en Bogotá y en las salidas",
+    filas: ["Bogotá", "Salidas"],
+    series: [
+      { nombre: "Con batería", clase: "s1", valores: [bo.kmElec, sa.kmElec] },
+      { nombre: "Con gasolina", clase: "s2", valores: [bo.kmGas, sa.kmGas] },
+    ],
+    etiquetas: [bo, sa].map((z) => (z.km > 0 ? `${fmtPct(z.pctElec)} batería` : "")),
+    fmtEje: (v) => `${fmtNum(v)} km`,
+    tip: (i) => {
+      const z = [bo, sa][i];
+      return `<b>${i === 0 ? "En Bogotá" : "En las salidas"}</b>` +
+        filaTip("s1", "Con batería", `${fmtNum(z.kmElec)} km`) +
+        filaTip("s2", "Con gasolina", `${fmtNum(z.kmGas)} km`) +
+        filaTip("", "Total", `${fmtNum(z.km)} km`) +
+        (z.costoKm != null ? filaTip("", "Costo por km", fmtPesos(z.costoKm)) : "");
+    },
+  });
+  $("#lista-salidas").innerHTML = a.listaSalidas.length
+    ? `<p class="mini-title">Las salidas que encontré</p><ul class="salidas">${a.listaSalidas.map((s) =>
+        `<li><span>${fmtFecha(s.desde)} – ${fmtFecha(s.hasta)}</span><span>${fmtNum(s.km)} km: ${fmtNum(s.kmElec)} con batería y ${fmtNum(s.kmGas)} con gasolina</span></li>`).join("")}</ul>`
+    : "";
+
+  // Mes a mes
   const meses = a.meses;
   $("#sub-meses").textContent = `${fmtPesosCorto(sum(meses, (m) => m.energia))} en energía y ${fmtPesosCorto(sum(meses, (m) => m.gasolina))} en gasolina, de ${meses[0].nombre} a ${meses[meses.length - 1].nombre}.`;
   const parciales = meses.filter((m) => m.parcial || m.sinTarifa).map((m) => m.nombre);
@@ -447,7 +570,9 @@ function pintar() {
   // Tablas
   const filasMes = meses.map((m) => `<tr><td>${m.nombre}${m.parcial ? " *" : ""}</td><td>${m.cargas}</td><td>${fmtNum(m.kwh, 1)}</td><td>${fmtPesos(m.energia)}</td><td>${fmtNum(m.galones, 2)}</td><td>${fmtPesos(m.gasolina)}</td></tr>`).join("");
   const filasCasa = casa.map((p) => `<tr><td>${p.nombre} (${fmtFecha(p.desde)} – ${fmtFecha(p.hasta)})</td><td>${fmtPesos(p.precio)}</td><td>${fmtNum(p.consumo)}</td><td>${fmtNum(p.carro, 1)}</td><td>${p.consumo ? fmtPct(p.carro / p.consumo) : ""}</td></tr>`).join("");
+  const filaZona = (n, z) => `<tr><td>${n}</td><td>${fmtNum(z.km)}</td><td>${fmtNum(z.kmElec)}</td><td>${fmtNum(z.kmGas)}</td><td>${z.costo != null ? fmtPesos(z.costo) : "—"}</td><td>${z.costoKm != null ? fmtPesos(z.costoKm) : "—"}</td></tr>`;
   $("#tablas").innerHTML =
+    `<div class="tabla-wrap"><table><caption>Bogotá y salidas</caption><thead><tr><th>Dónde</th><th>Km</th><th>Con batería</th><th>Con gasolina</th><th>Costo</th><th>Por km</th></tr></thead><tbody>${filaZona("Bogotá", bo)}${filaZona("Salidas", sa)}</tbody></table></div>` +
     `<div class="tabla-wrap"><table><caption>Mes a mes</caption><thead><tr><th>Mes</th><th>Cargas</th><th>kWh</th><th>Energía</th><th>Galones</th><th>Gasolina</th></tr></thead><tbody>${filasMes}</tbody></table></div>` +
     `<div class="tabla-wrap"><table><caption>Facturas de la casa</caption><thead><tr><th>Periodo</th><th>Precio kWh</th><th>kWh casa</th><th>kWh carro</th><th>Carro</th></tr></thead><tbody>${filasCasa}</tbody></table></div>`;
 }
