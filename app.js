@@ -218,9 +218,11 @@ function analizar(datos, ajustes) {
   const precioGalDatos = conPrecioGal.length ? conPrecioGal[conPrecioGal.length - 1].precioGal : 22000;
   const tipo = ajustes.tipo === "extra" ? "extra" : "corriente";
   const precioGal = ajustes.precioGal || (tipo === "extra" ? precioGalDatos : PRECIO_CORRIENTE);
-  const kmGal = ajustes.kmGal || 35;
+  const kmGal = ajustes.kmGalCiudad || 30;
+  const kmGalCarretera = ajustes.kmGalCarretera || 40;
   const costoKmElec = precioKwh != null && consumo ? precioKwh * consumo : null;
-  const costoKmGas = precioGal / kmGal;
+  const costoKmGas = precioGal / kmGal; // carro de referencia en ciudad
+  const costoKmGasCarretera = precioGal / kmGalCarretera;
 
   const ini = cargas[0], fin = cargas[cargas.length - 1];
   const kmVentana = fin.odo - ini.odo;
@@ -292,7 +294,7 @@ function analizar(datos, ajustes) {
 
   return {
     nCargas: conEnergia.length, kwhTotal, precioKwh, sinTarifa, consumo, kmPorCarga,
-    tipo, precioGal, kmGal, costoKmElec, costoKmGas,
+    tipo, precioGal, kmGal, kmGalCarretera, costoKmElec, costoKmGas, costoKmGasCarretera,
     ini: ini.fecha, fin: fin.fecha, kmVentana, kmElec, pctElec, ahorro, costoKmTotal,
     bogota, salidas, listaSalidas, kmPorGalon, costoKmGasElektra,
     meses, casa, pctCasa, promedioAntes, bins: bins.slice(0, ultimoBin + 1), en80, deNoche, bajo20,
@@ -435,7 +437,7 @@ const filaTip = (clase, nombre, valor) => `<div class="row"><span>${clase ? `<sp
 
 /* ---------- Pintar el tablero ---------- */
 
-const estado = { datos: null, fuente: "", ajustes: { kmGal: 35, tipo: "corriente", precioGal: null } };
+const estado = { datos: null, fuente: "", ajustes: { kmGalCiudad: 30, kmGalCarretera: 40, tipo: "corriente", precioGal: null } };
 
 function pintar() {
   const a = analizar(estado.datos, estado.ajustes);
@@ -446,7 +448,7 @@ function pintar() {
   $("#hero").innerHTML = a.costoKmElec
     ? `<p class="hero-label">En eléctrico, cada kilómetro de Elektra cuesta</p>
        <p class="hero-num">${fmtPesos(a.costoKmElec)}</p>
-       <p class="hero-sub">Un carro a gasolina ${a.tipo} de ${fmtNum(a.kmGal)} km por galón gasta ${fmtPesos(a.costoKmGas)} por kilómetro${veces > 1 ? `: <strong>${fmtNum(veces, 1)} veces más</strong>` : ""}.</p>`
+       <p class="hero-sub">Un carro a gasolina ${a.tipo} que en ciudad hace ${fmtNum(a.kmGal)} km por galón gasta ${fmtPesos(a.costoKmGas)} por kilómetro${veces > 1 ? `: <strong>${fmtNum(veces, 1)} veces más</strong>` : ""}.</p>`
     : `<p class="hero-label">Todavía no se puede calcular el costo por kilómetro: faltan tarifas o tramos entre cargas.</p>`;
 
   const tile = (label, value, note) => `<div class="tile"><p class="tile-label">${label}</p><p class="tile-value">${value}</p><p class="tile-note">${note}</p></div>`;
@@ -454,7 +456,7 @@ function pintar() {
   if (a.precioKwh) tiles.push(tile("Precio real del kWh", fmtPesos(a.precioKwh), "Factura de la casa, con la contribución"));
   if (a.consumo) tiles.push(tile("Consumo eléctrico", `${fmtNum(a.consumo * 100, 1)} <span class="tile-unit">kWh/100 km</span>`, a.kmPorCarga ? `≈ ${fmtNum(a.kmPorCarga)} km por carga, de casi vacía a 80 %` : "Medido entre cargas"));
   if (a.pctElec != null) tiles.push(tile("Km con batería (aprox.)", fmtPct(a.pctElec), `De ${fmtNum(a.kmVentana)} km, del ${fmtFecha(a.ini)} al ${fmtFecha(a.fin)}`));
-  if (a.ahorro != null) tiles.push(tile("Ahorro frente a gasolina (aprox.)", fmtPesosCorto(a.ahorro), `Frente al carro de referencia (${a.tipo}), en los km que hizo con batería`));
+  if (a.ahorro != null) tiles.push(tile("Ahorro frente a gasolina (aprox.)", fmtPesosCorto(a.ahorro), `Frente al carro de referencia (${a.tipo}, en ciudad), en los km que hizo con batería`));
   if (a.costoKmTotal != null) tiles.push(tile("Todo incluido (aprox.)", `${fmtPesos(a.costoKmTotal)} <span class="tile-unit">por km</span>`, "Energía y gasolina, en el mismo periodo"));
   $("#tiles").innerHTML = tiles.join("");
 
@@ -462,8 +464,9 @@ function pintar() {
 
   // Bogotá frente a salidas
   const bo = a.bogota, sa = a.salidas;
-  const veces2 = (z) => !z.costoKm ? ""
-    : a.costoKmGas > z.costoKm ? `: ${fmtNum(a.costoKmGas / z.costoKm, 1)} veces más`
+  const veces2 = (z, ref) => !z.costoKm ? ""
+    : ref >= z.costoKm * 1.05 ? `: ${fmtNum(ref / z.costoKm, 1)} veces más`
+    : ref >= z.costoKm * 0.95 ? ": casi lo mismo que Elektra"
     : ": aquí Elektra no ahorra";
   const zona = (titulo, z, lineas) => `<div class="zona"><p class="tile-label">${titulo}</p>
     <p class="zona-valor">${z.costoKm != null ? `${fmtPesos(z.costoKm)} <span class="tile-unit">por km</span>` : "—"}</p>
@@ -471,12 +474,12 @@ function pintar() {
   $("#zonas").innerHTML =
     zona("En Bogotá", bo, [
       `${fmtNum(bo.km)} km · ${bo.pctElec != null ? fmtPct(bo.pctElec) : "—"} con batería`,
-      `Un carro a gasolina ${a.tipo} gastaría ${fmtPesos(a.costoKmGas)} por km${veces2(bo)}.`,
+      `Un carro a gasolina ${a.tipo} de ${fmtNum(a.kmGal)} km por galón en ciudad gastaría ${fmtPesos(a.costoKmGas)} por km${veces2(bo, a.costoKmGas)}.`,
     ]) +
     (sa.n
       ? zona("En las salidas de Bogotá", sa, [
           `${sa.n} ${sa.n === 1 ? "salida" : "salidas"} · ${fmtNum(sa.km)} km · ${fmtPct(sa.pctElec)} con batería`,
-          `Un carro a gasolina ${a.tipo} gastaría ${fmtPesos(a.costoKmGas)} por km${veces2(sa)}.`,
+          `Un carro a gasolina ${a.tipo} de ${fmtNum(a.kmGalCarretera)} km por galón en carretera gastaría ${fmtPesos(a.costoKmGasCarretera)} por km${veces2(sa, a.costoKmGasCarretera)}.`,
           a.kmPorGalon ? `Con gasolina, Elektra hace unos ${fmtNum(a.kmPorGalon)} km por galón.` : "",
         ].filter(Boolean))
       : `<div class="zona"><p class="tile-label">En las salidas de Bogotá</p><p class="tile-note">No hay tramos de ${UMBRAL_SALIDA} km o más entre dos cargas en este periodo.</p></div>`);
@@ -622,10 +625,11 @@ document.querySelectorAll('input[name="tipoGas"]').forEach((r) => r.addEventList
   estado.ajustes.precioGal = null;
   pintar();
 }));
-$("#kmGal").addEventListener("input", (e) => {
-  const v = Number(e.target.value);
-  if (v >= 5) { estado.ajustes.kmGal = v; pintar(); }
-});
+[["#kmGalCiudad", "kmGalCiudad"], ["#kmGalCarretera", "kmGalCarretera"]].forEach(([sel, clave]) =>
+  $(sel).addEventListener("input", (e) => {
+    const v = Number(e.target.value);
+    if (v >= 5) { estado.ajustes[clave] = v; pintar(); }
+  }));
 $("#precioGal").addEventListener("input", (e) => {
   const v = Number(e.target.value);
   if (v >= 1000) { estado.ajustes.precioGal = v; pintar(); }

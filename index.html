@@ -44,14 +44,17 @@
             <label><input type="radio" name="tipoGas" value="corriente" checked> Corriente</label>
             <label><input type="radio" name="tipoGas" value="extra"> Extra</label>
           </fieldset>
-          <label>Rendimiento <span class="unit">km por galón</span>
-            <input type="number" id="kmGal" min="10" max="120" step="1" value="35">
+          <label>En ciudad <span class="unit">km por galón</span>
+            <input type="number" id="kmGalCiudad" min="5" max="150" step="1" value="30">
+          </label>
+          <label>En carretera <span class="unit">km por galón</span>
+            <input type="number" id="kmGalCarretera" min="5" max="150" step="1" value="40">
           </label>
           <label>Precio del galón <span class="unit">pesos</span>
             <input type="number" id="precioGal" min="5000" max="60000" step="10">
           </label>
         </div>
-        <p class="note">La mayoría de los carros a gasolina usa corriente: su precio está regulado y en Bogotá, en octubre de 2026, es de $16.377 por galón (CREG). La extra arranca con el precio de la última tanqueada. Un carro parecido, en ciudad, hace entre 30 y 40 km por galón. Puedes escribir otros valores.</p>
+        <p class="note">Bogotá se compara con el rendimiento en ciudad; las salidas, con el de carretera. Los valores de partida son los de una Renault Koleos 2.5 a gasolina: oficialmente hace 31,5 km por galón en ciudad y 47 en carretera; en el uso real, unos 30 y 40. La corriente tiene precio regulado: en Bogotá, en octubre de 2026, $16.377 por galón (CREG). La extra arranca con el precio de la última tanqueada. Puedes escribir otros valores.</p>
       </section>
 
       <section class="card chart-card" aria-label="Bogotá frente a las salidas">
@@ -98,7 +101,7 @@
           <li><strong>Precio real del kWh:</strong> la tarifa de cada factura de la casa, con la contribución del estrato, según el periodo en que cayó cada carga. No se usa el precio que muestra la app.</li>
           <li><strong>Consumo eléctrico:</strong> se mide en los tramos entre dos cargas seguidas (sin tanqueadas en medio y de menos de 90 km): batería que se gastó ÷ kilómetros. Se toma la mediana. Es energía medida en el enchufe, así que ya incluye las pérdidas de la carga.</li>
           <li><strong>Costo por km en eléctrico:</strong> precio real del kWh × consumo.</li>
-          <li><strong>Costo por km a gasolina:</strong> precio del galón ÷ rendimiento del carro de referencia (lo ajustas arriba).</li>
+          <li><strong>Costo por km a gasolina:</strong> precio del galón ÷ rendimiento del carro de referencia: en ciudad para Bogotá y en carretera para las salidas (los ajustas arriba).</li>
           <li><strong>Km con batería:</strong> kWh cargados ÷ consumo, frente a los km del odómetro entre la primera y la última carga. Es aproximado.</li>
           <li><strong>Gasolina:</strong> el valor neto de cada tanqueada (con descuentos). Cae en el mes en que se tanquea, no en el que se gasta.</li>
           <li><strong>Bogotá y salidas:</strong> cada tramo entre dos cargas seguidas se separa en km con batería (batería gastada en el tramo ÷ consumo) y km con gasolina (el resto). Los tramos de 120 km o más son salidas de Bogotá.</li>
