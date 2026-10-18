@@ -1,6 +1,6 @@
 # Tablero de Elektra
 
-¿Cuánto cuesta de verdad cada kilómetro de un híbrido enchufable en Bogotá? Este tablero lo responde con datos reales: la tarifa de la factura de energía de la casa, las cargas de la app My BMW y las tanqueadas.
+¿Cuánto cuesta de verdad cada kilómetro de un híbrido enchufable en Bogotá? Este tablero lo responde con datos reales: la tarifa de la factura de energía de la casa, las cargas de la app del carro y las tanqueadas.
 
 ## Qué muestra
 
